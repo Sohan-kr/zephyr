@@ -183,6 +183,7 @@ Arduino Platforms:
     - facchinm
   files:
     - boards/arduino/
+    - boards/shields/arduino_*/
     - drivers/*/*modulino*
 
 ARM arch:
@@ -271,6 +272,7 @@ ARM SiP SVC:
     - include/zephyr/sip_svc/
     - include/zephyr/drivers/sip_svc/
     - drivers/sip_svc/
+    - samples/subsys/sip_svc/
   labels:
     - "area: ARM SiP SVC"
   tests:
@@ -370,7 +372,6 @@ Bluetooth HCI:
     - hermabe
     - Thalley
     - sjanc
-    - theob-pro
     - HoZHel
     - cvinayak
   files:
@@ -423,7 +424,6 @@ Bluetooth Host:
     - rugeGerritsen
     - sjanc
     - Thalley
-    - theob-pro
     - cvinayak
   files:
     - doc/connectivity/bluetooth/
@@ -464,6 +464,7 @@ Bluetooth Host:
     - samples/bluetooth/tmap*/
     - samples/bluetooth/iso_*/
     - samples/bluetooth/mesh*/
+    - samples/bluetooth/classic/
     - subsys/bluetooth/host/iso.c
     - subsys/bluetooth/host/iso_internal.h
     - subsys/bluetooth/host/shell/iso.c
@@ -480,6 +481,7 @@ Bluetooth Host:
     - tests/bsim/bluetooth/hci_uart/
     - tests/bsim/bluetooth/ll/
     - tests/bsim/bluetooth/mesh/
+    - tests/bsim/bluetooth/tester/src/audio/
   labels:
     - "area: Bluetooth Host"
     - "area: Bluetooth"
@@ -518,8 +520,6 @@ Bluetooth Audio:
     - Thalley
   collaborators:
     - jhedberg
-    - Casper-Bonde-Bose
-    - MariuszSkamra
     - sjanc
     - asbjornsabo
     - fredrikdanebjer
@@ -534,6 +534,7 @@ Bluetooth Audio:
     - tests/bluetooth/audio/
     - tests/bsim/bluetooth/audio/
     - tests/bsim/bluetooth/audio_samples/
+    - tests/bsim/bluetooth/tester/src/audio/
     - tests/bluetooth/shell/audio.conf
     - tests/bluetooth/tester/overlay-le-audio.conf
     - tests/bluetooth/tester/overlay-bt_ll_sw_split.conf
@@ -567,6 +568,7 @@ Bluetooth Classic:
     - subsys/bluetooth/host/classic/
     - include/zephyr/bluetooth/classic/
     - tests/bluetooth/classic/
+    - samples/bluetooth/classic/
   labels:
     - "area: Bluetooth Classic"
     - "area: Bluetooth"
@@ -777,6 +779,7 @@ CMSIS-DSP integration:
     - modules/cmsis-dsp/
     - tests/benchmarks/cmsis_dsp/
     - tests/lib/cmsis_dsp/
+    - samples/modules/cmsis_dsp/
   labels:
     - "area: CMSIS-DSP"
   tests:
@@ -903,6 +906,7 @@ Demand Paging:
   files:
     - subsys/demand_paging/
     - tests/kernel/mem_protect/demand_paging/
+    - samples/subsys/demand_paging/
   tests:
     - kernel.demand_paging
 
@@ -1083,8 +1087,8 @@ Release Notes:
     - "Release Notes"
 
 "Drivers: ADC":
-  status: maintained
-  maintainers:
+  status: odd fixes
+  collaborators:
     - anangl
   files:
     - drivers/adc/
@@ -1111,6 +1115,7 @@ Release Notes:
     - drivers/audio/
     - include/zephyr/audio/
     - doc/hardware/peripherals/audio/
+    - samples/drivers/audio/
   labels:
     - "area: Audio"
 
@@ -1140,6 +1145,7 @@ Release Notes:
     - drivers/auxdisplay/*
     - dts/bindings/auxdisplay/*
     - doc/hardware/peripherals/auxdisplay.rst
+    - samples/drivers/auxdisplay/
   labels:
     - "area: Aux display"
   tests:
@@ -1338,6 +1344,18 @@ Release Notes:
   labels:
     - "area: DAI"
 
+"Drivers: Debug":
+  status: maintained
+  maintainers:
+    - asmellby
+  collaborators:
+    - nordic-krch
+  files:
+    - drivers/debug/
+    - dts/bindings/debug/
+  labels:
+    - "area: Debugging"
+
 "Drivers: Devmux":
   status: maintained
   maintainers:
@@ -1458,7 +1476,9 @@ Release Notes:
     - tests/drivers/ethernet/
     - include/zephyr/drivers/ethernet/
     - include/zephyr/net/phy.h
+    - include/zephyr/net/mii.h
     - include/zephyr/net/ethernet.h
+    - samples/drivers/ethernet/
   labels:
     - "area: Ethernet"
   tests:
@@ -1511,12 +1531,15 @@ Release Notes:
   maintainers:
     - aaronemassey
     - teburd
+  collaborators:
+    - DBS06
   files:
     - drivers/fuel_gauge/
     - dts/bindings/fuel-gauge/
     - include/zephyr/drivers/fuel_gauge.h
     - tests/drivers/fuel_gauge/
     - doc/hardware/peripherals/fuel_gauge.rst
+    - samples/drivers/fuel_gauge/
   labels:
     - "area: Fuel Gauge"
   tests:
@@ -1558,6 +1581,7 @@ Release Notes:
     - include/zephyr/dt-bindings/gnss/
     - tests/drivers/build_all/gnss/
     - tests/drivers/gnss/
+    - samples/drivers/gnss/
   labels:
     - "area: GNSS"
   tests:
@@ -1813,6 +1837,8 @@ Release Notes:
   maintainers:
     - Mani-Sadhasivam
     - simonguinot
+  collaborators:
+    - jeppenodgaard
   files:
     - drivers/led/
     - include/zephyr/drivers/led/
@@ -1835,12 +1861,14 @@ Release Notes:
   collaborators:
     - soburi
     - thedjnK
+    - jeppenodgaard
   files:
     - drivers/led_strip/
     - dts/bindings/led_strip/
     - include/zephyr/drivers/led_strip.h
     - tests/drivers/build_all/led_strip/
     - include/zephyr/drivers/led_strip/
+    - samples/drivers/led/led_strip/
   labels:
     - "area: LED"
   tests:
@@ -1926,6 +1954,7 @@ Release Notes:
     - include/zephyr/drivers/rtc.h
     - tests/drivers/build_all/rtc/
     - dts/bindings/rtc/
+    - samples/drivers/rtc/
   labels:
     - "area: RTC"
   tests:
@@ -1991,6 +2020,23 @@ Release Notes:
   tests:
     - sample.drivers.espi.ps2
 
+"Drivers: PSI5":
+  status: maintained
+  maintainers:
+    - manuargue
+    - Dat-NguyenDuy
+  collaborators:
+    - congnguyenhuu
+  files:
+    - drivers/psi5/
+    - include/zephyr/drivers/psi5/
+    - dts/bindings/psi5/
+    - doc/hardware/peripherals/psi5.rst
+  labels:
+    - "area: PSI5"
+  tests:
+    - drivers.psi5
+
 "Drivers: PTP Clock":
   status: maintained
   maintainers:
@@ -2018,10 +2064,9 @@ Release Notes:
     - "area: PM CPU ops"
 
 "Drivers: PWM":
-  status: maintained
-  maintainers:
-    - anangl
+  status: odd fixes
   collaborators:
+    - anangl
     - henrikbrixandersen
   files:
     - drivers/pwm/
@@ -2033,6 +2078,7 @@ Release Notes:
     - tests/drivers/build_all/pwm/
     - include/zephyr/drivers/pwm.h
     - include/zephyr/drivers/pwm/
+    - samples/basic/blinky_pwm/
   labels:
     - "area: PWM"
   tests:
@@ -2101,6 +2147,23 @@ Release Notes:
   tests:
     - drivers.sensor
 
+"Drivers: SENT":
+  status: maintained
+  maintainers:
+    - manuargue
+    - Dat-NguyenDuy
+  collaborators:
+    - congnguyenhuu
+  files:
+    - drivers/sent/
+    - include/zephyr/drivers/sent/
+    - dts/bindings/sent/
+    - doc/hardware/peripherals/sent.rst
+  labels:
+    - "area: SENT"
+  tests:
+    - drivers.sent
+
 "Drivers: SMBus":
   status: maintained
   maintainers:
@@ -2123,6 +2186,7 @@ Release Notes:
     - tbursztyka
   collaborators:
     - teburd
+    - decsny
   files:
     - drivers/spi/
     - include/zephyr/drivers/spi.h
@@ -2204,7 +2268,8 @@ Release Notes:
   files:
     - drivers/virtio/
     - dts/bindings/virtio/
-    - include/zephyr/virtio/
+    - include/zephyr/drivers/virtio.h
+    - include/zephyr/drivers/virtio/
   labels:
     - "area: VIRTIO"
 
@@ -2332,6 +2397,7 @@ Release Notes:
     - include/zephyr/drivers/virtualization/
     - doc/services/virtualization/
     - include/zephyr/drivers/virtualization/ivshmem.h
+    - samples/drivers/virtualization/
   labels:
     - "area: Virtualization"
   tests:
@@ -2567,7 +2633,6 @@ Utilities:
     - tests/unit/list/
     - tests/unit/intmath/
     - tests/unit/pot/
-    - tests/lib/time/
     - tests/lib/onoff/
     - tests/lib/sys_util/
     - tests/lib/sprintf/
@@ -2662,6 +2727,7 @@ Linker Scripts:
     - include/zephyr/linker/
     - tests/misc/iterable_sections/
     - tests/application_development/code_relocation/
+    - samples/application_development/code_relocation_nocopy/
   labels:
     - "area: Linker Scripts"
   tests:
@@ -3292,6 +3358,7 @@ RISCV arch:
     - npitre
     - ycsin
     - VynDragon
+    - masz-nordic
   files:
     - arch/riscv/
     - boards/enjoydigital/litex_vexriscv/
@@ -3676,6 +3743,7 @@ Silabs Platforms:
     - drivers/*/*/*silabs*
     - drivers/*/*/*siwx91x*
     - tests/boards/silabs/
+    - snippets/*silabs*/
   labels:
     - "platform: Silabs"
 
@@ -3736,6 +3804,7 @@ Intel Platforms (X86):
     - drivers/timer/apic*
   labels:
     - "platform: X86"
+    - "platform: Intel"
 
 Intel Platforms (Xtensa):
   status: maintained
@@ -3846,10 +3915,19 @@ NXP Platform Wireless:
     - axelnxp
     - George-Stefan
   files:
-    - drivers/wifi/nxp/
-    - drivers/bluetooth/hci/*nxp*
-    - drivers/ieee802154/ieee802154_kw41z.c
+    - boards/nxp/*mcxw*/
+    - boards/nxp/*rw*/
     - drivers/*/*mcxw*.c
+    - drivers/bluetooth/hci/*nxp*
+    - drivers/hdlc_rcp_if/*nxp*
+    - drivers/ieee802154/ieee802154_kw41z.c
+    - drivers/wifi/nxp/
+    - samples/bluetooth/**/*rw*
+    - samples/net/**/*mcxw*
+    - samples/net/**/*nxp*
+    - samples/net/**/*rw*
+    - soc/nxp/mcx/mcxw/
+    - soc/nxp/rw/
   labels:
     - "platform: NXP Drivers"
 
@@ -3956,6 +4034,10 @@ NXP Platforms (Xtensa):
   files:
     - soc/nxp/imx/*/adsp/
     - soc/nxp/imxrt/imxrt5xx/f1/
+    - soc/nxp/imxrt/imxrt7xx/hifi1/
+    - soc/nxp/imxrt/*/hifi4/
+    - soc/nxp/imxrt/imxrt[567]xx/CMakeLists.txt
+    - soc/nxp/imxrt/imxrt[567]xx/Kconfig*
   labels:
     - "platform: NXP Xtensa"
   description: NXP Xtensa platforms
@@ -4053,6 +4135,9 @@ nRF Platforms:
     - tests/drivers/*/*nrf*/
     - snippets/nordic*/
     - tests/boards/nrf/
+  files-exclude:
+    - drivers/wifi/nrf_wifi/
+    - dts/bindings/wifi/
   labels:
     - "platform: nRF"
 
@@ -4385,7 +4470,8 @@ Infineon Platforms:
   maintainers:
     - ifyall
   collaborators:
-    - npal-cy
+    - sreeramIfx
+    - mcatee-infineon
     - talih0
   files:
     - boards/cypress/
@@ -4656,6 +4742,15 @@ Tracing:
     - "area: tracing"
   tests:
     - tracing
+
+u-blox Platforms:
+  status: maintained
+  maintainers:
+    - 3rang
+  files:
+    - boards/u-blox/
+  labels:
+    - "platform: u-blox"
 
 USB:
   status: maintained
@@ -5016,7 +5111,8 @@ West:
     - ifyall
   collaborators:
     - nashif
-    - npal-cy
+    - sreeramIfx
+    - mcatee-infineon
   files:
     - modules/Kconfig.cypress
   labels:
@@ -5065,7 +5161,8 @@ West:
   collaborators:
     - parthitce
     - talih0
-    - npal-cy
+    - sreeramIfx
+    - mcatee-infineon
   files:
     - modules/Kconfig.infineon
     - modules/hal_infineon/
@@ -5276,7 +5373,7 @@ West:
   files:
     - modules/Kconfig.intel
   labels:
-    - "platform: Intel"
+    - "platform: Intel ISH"
 
 "West project: zephyr-lang-rust":
   status: maintained
@@ -5348,6 +5445,7 @@ West:
     - modules/lvgl/
     - tests/lib/gui/lvgl/
     - include/zephyr/dt-bindings/lvgl/
+    - samples/modules/lvgl/
   labels:
     - "area: LVGL"
 

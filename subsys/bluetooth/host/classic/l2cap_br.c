@@ -60,6 +60,11 @@ LOG_MODULE_REGISTER(bt_l2cap_br, CONFIG_BT_L2CAP_LOG_LEVEL);
 
 #define L2CAP_BR_PSM_SDP	0x0001
 
+#define L2CAP_BR_ZL_I_FRAME_FLAG_MASK 0xfffffeffU
+#define L2CAP_BR_ZL_I_FRAME_UD_FLAG   0xfffffeff
+#define L2CAP_BR_IS_ZERO_LEN_I_FRAME(flag)                                       \
+	((POINTER_TO_UINT(flag) & L2CAP_BR_ZL_I_FRAME_FLAG_MASK) == L2CAP_BR_ZL_I_FRAME_UD_FLAG)
+
 #define L2CAP_BR_S_FRAME_FLAG_MASK 0xffffff00U
 #define L2CAP_BR_S_FRAME_UD_FLAG   0xffffff00
 #define L2CAP_BR_IS_S_FRAME(flag)                                                \
@@ -647,7 +652,12 @@ static int bt_l2cap_br_update_req_seq_direct(struct bt_l2cap_br_chan *br_chan, u
 
 	if (!atomic_test_bit(br_chan->flags, L2CAP_FLAG_RECV_FRAME_R)) {
 		if (bt_l2cap_br_get_outstanding_count(br_chan)) {
-			l2cap_br_start_timer(br_chan, BT_L2CAP_BR_TIMER_RET, true);
+			/*
+			 * If unacknowledged I-frames have been sent but the retransmission
+			 * timer has not elapsed, then the ongoing retransmission timer should
+			 * not be restarted.
+			 */
+			l2cap_br_start_timer(br_chan, BT_L2CAP_BR_TIMER_RET, false);
 		} else {
 			l2cap_br_start_timer(br_chan, BT_L2CAP_BR_TIMER_MONITOR, false);
 		}
@@ -892,6 +902,11 @@ int bt_l2cap_br_send_cb(struct bt_conn *conn, uint16_t cid, struct net_buf *buf,
 		hdr = net_buf_push(buf, sizeof(*hdr));
 		hdr->len = sys_cpu_to_le16(buf->len - sizeof(*hdr));
 		hdr->cid = sys_cpu_to_le16(cid);
+	} else {
+		if ((cb == NULL) && (user_data == NULL) && (buf->len == 0)) {
+			/* Mask it is a zero-length I-frame */
+			user_data = UINT_TO_POINTER(L2CAP_BR_ZL_I_FRAME_UD_FLAG);
+		}
 	}
 #else
 	hdr = net_buf_push(buf, sizeof(*hdr));
@@ -1137,6 +1152,10 @@ static struct net_buf *l2cap_br_get_next_sdu(struct bt_l2cap_br_chan *br_chan)
 		}
 
 		if (L2CAP_BR_IS_S_FRAME(closure_data(sdu->user_data))) {
+			return sdu;
+		}
+
+		if (L2CAP_BR_IS_ZERO_LEN_I_FRAME(closure_data(sdu->user_data))) {
 			return sdu;
 		}
 	}
@@ -1501,6 +1520,10 @@ send_i_frame:
 			br_chan->next_tx_seq =
 				bt_l2cap_br_update_seq(br_chan, br_chan->next_tx_seq + 1);
 
+			if (L2CAP_BR_IS_ZERO_LEN_I_FRAME(closure_data(pdu->user_data))) {
+				make_closure(pdu->user_data, NULL, NULL);
+			}
+
 			net_buf_pull(pdu, pdu_len);
 
 			if (br_chan->rx.mode != BT_L2CAP_BR_LINK_MODE_STREAM) {
@@ -1574,13 +1597,31 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 		return NULL;
 	}
 
+	__ASSERT_NO_MSG(conn->state == BT_CONN_CONNECTED);
+
 	struct bt_l2cap_br_chan *br_chan;
 
 	br_chan = CONTAINER_OF(pdu_ready, struct bt_l2cap_br_chan, _pdu_ready);
 
 #if defined(CONFIG_BT_L2CAP_RET_FC)
 	if (br_chan->tx.mode != BT_L2CAP_BR_LINK_MODE_BASIC) {
-		return l2cap_br_ret_fc_data_pull(conn, amount, length);
+		struct net_buf *buf;
+		const sys_snode_t *next_pdu_ready;
+
+		buf = l2cap_br_ret_fc_data_pull(conn, amount, length);
+
+		/* When the returned buffer is a `NULL`, it means there is not any data needs to
+		 * be sent. However maybe there is any frame pending on other L2CAP channel needs
+		 * to be sent over the same ACL connection. Re-trigger the TX processor. It will
+		 * call the function `l2cap_br_data_pull()` again and the pending buffer will be
+		 * pulled from following L2CAP.
+		 */
+		next_pdu_ready = sys_slist_peek_head(&conn->l2cap_data_ready);
+		if ((buf == NULL) && (next_pdu_ready != NULL) && (next_pdu_ready != pdu_ready)) {
+			bt_tx_irq_raise();
+		}
+
+		return buf;
 	}
 #endif /* CONFIG_BT_L2CAP_RET_FC */
 
@@ -1591,12 +1632,14 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 
 	__ASSERT(tx_pdu, "signaled ready but no PDUs in the TX queue");
 
-	struct net_buf *pdu = CONTAINER_OF(tx_pdu, struct net_buf, node);
+	struct net_buf *q_pdu = CONTAINER_OF(tx_pdu, struct net_buf, node);
 
-	if (bt_buf_has_view(pdu)) {
-		LOG_ERR("already have view on %p", pdu);
+	if (bt_buf_has_view(q_pdu)) {
+		LOG_ERR("already have view on %p", q_pdu);
 		return NULL;
 	}
+
+	struct net_buf *pdu = net_buf_ref(q_pdu);
 
 	/* We can't interleave ACL fragments from different channels for the
 	 * same ACL conn -> we have to wait until a full L2 PDU is transferred
@@ -1605,12 +1648,14 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 	bool last_frag = amount >= pdu->len;
 
 	if (last_frag) {
-		LOG_DBG("last frag, removing %p", pdu);
+		LOG_DBG("last frag, removing %p", q_pdu);
 		__maybe_unused bool found;
 
-		found = sys_slist_find_and_remove(&br_chan->_pdu_tx_queue, &pdu->node);
+		found = sys_slist_find_and_remove(&br_chan->_pdu_tx_queue, &q_pdu->node);
 
 		__ASSERT_NO_MSG(found);
+
+		net_buf_unref(q_pdu);
 
 		LOG_DBG("chan %p done", br_chan);
 		lower_data_ready(br_chan);
@@ -4010,6 +4055,14 @@ static uint16_t l2cap_br_conf_opt_ret_fc(struct bt_l2cap_chan *chan, struct net_
 			opt_ret_fc->tx_windows_size = CONFIG_BT_L2CAP_MAX_WINDOW_SIZE;
 		}
 
+		if (monitor_timeout == 0) {
+			monitor_timeout = CONFIG_BT_L2CAP_BR_MONITOR_TIMEOUT;
+		}
+
+		if (retransmission_timeout == 0) {
+			retransmission_timeout = CONFIG_BT_L2CAP_BR_RET_TIMEOUT;
+		}
+
 		opt_ret_fc->retransmission_timeout = sys_cpu_to_le16(retransmission_timeout);
 		opt_ret_fc->monitor_timeout = sys_cpu_to_le16(monitor_timeout);
 
@@ -4646,11 +4699,16 @@ int bt_l2cap_br_chan_connect(struct bt_conn *conn, struct bt_l2cap_chan *chan, u
 		return -EBUSY;
 	}
 
+	if (!br_chan->rx.mtu) {
+		br_chan->rx.mtu = BT_L2CAP_RX_MTU;
+	}
 #if defined(CONFIG_BT_L2CAP_RET_FC)
 	err = l2cap_br_check_chan_config(conn, br_chan);
 	if (err) {
 		return err;
 	}
+#else
+	br_chan->rx.mtu = MIN(br_chan->rx.mtu, BT_L2CAP_RX_MTU);
 #endif /* CONFIG_BT_L2CAP_RET_FC */
 
 	if (!l2cap_br_chan_add(conn, chan, l2cap_br_chan_destroy)) {
@@ -5749,17 +5807,15 @@ static void bt_l2cap_br_ret_fc_i_recv(struct bt_l2cap_br_chan *br_chan, struct n
 
 valid_frame:
 	switch (sar) {
-	case BT_L2CAP_CONTROL_SAR_UNSEG:
-		__fallthrough;
 	case BT_L2CAP_CONTROL_SAR_START:
 		if (buf->len < 2) {
-			LOG_WRN("Invalid SDU length");
+			LOG_WRN("Too short data packet");
 			bt_l2cap_chan_disconnect(&br_chan->chan);
 			return;
 		}
 		break;
+	case BT_L2CAP_CONTROL_SAR_UNSEG:
 	case BT_L2CAP_CONTROL_SAR_END:
-		__fallthrough;
 	case BT_L2CAP_CONTROL_SAR_CONTI:
 		break;
 	}

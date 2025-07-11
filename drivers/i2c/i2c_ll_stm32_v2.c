@@ -436,15 +436,16 @@ int i2c_stm32_target_register(const struct device *dev,
 		return ret;
 	}
 
-#if defined(CONFIG_PM_DEVICE_RUNTIME)
+	/* Mark device as active */
+	(void)pm_device_runtime_get(dev);
+
+#if !defined(CONFIG_SOC_SERIES_STM32F7X)
 	if (pm_device_wakeup_is_capable(dev)) {
-		/* Mark device as active */
-		(void)pm_device_runtime_get(dev);
 		/* Enable wake-up from stop */
 		LOG_DBG("i2c: enabling wakeup from stop");
 		LL_I2C_EnableWakeUpFromStop(cfg->i2c);
 	}
-#endif /* defined(CONFIG_PM_DEVICE_RUNTIME) */
+#endif /* CONFIG_SOC_SERIES_STM32F7X */
 
 	LL_I2C_Enable(i2c);
 
@@ -527,21 +528,21 @@ int i2c_stm32_target_unregister(const struct device *dev,
 		LL_I2C_Disable(i2c);
 	}
 
-#if defined(CONFIG_PM_DEVICE_RUNTIME)
+#if !defined(CONFIG_SOC_SERIES_STM32F7X)
 	if (pm_device_wakeup_is_capable(dev)) {
 		/* Disable wake-up from STOP */
 		LOG_DBG("i2c: disabling wakeup from stop");
 		LL_I2C_DisableWakeUpFromStop(i2c);
-		/* Release the device */
-		(void)pm_device_runtime_put(dev);
 	}
-#endif /* defined(CONFIG_PM_DEVICE_RUNTIME) */
+#endif /* CONFIG_SOC_SERIES_STM32F7X */
+
+	/* Release the device */
+	(void)pm_device_runtime_put(dev);
 
 	data->slave_attached = false;
 
 	return 0;
 }
-
 #endif /* defined(CONFIG_I2C_TARGET) */
 
 void i2c_stm32_event(const struct device *dev)
@@ -842,7 +843,7 @@ static inline int msg_done(const struct device *dev,
 			return -EIO;
 		}
 		if ((k_uptime_get() - start_time) >
-		    STM32_I2C_TRANSFER_TIMEOUT_MSEC) {
+		    I2C_STM32_TRANSFER_TIMEOUT_MSEC) {
 			return -ETIMEDOUT;
 		}
 	}
@@ -851,7 +852,7 @@ static inline int msg_done(const struct device *dev,
 		LL_I2C_GenerateStopCondition(i2c);
 		while (!LL_I2C_IsActiveFlag_STOP(i2c)) {
 			if ((k_uptime_get() - start_time) >
-			    STM32_I2C_TRANSFER_TIMEOUT_MSEC) {
+			    I2C_STM32_TRANSFER_TIMEOUT_MSEC) {
 				return -ETIMEDOUT;
 			}
 		}
@@ -886,7 +887,7 @@ static int i2c_stm32_msg_write(const struct device *dev, struct i2c_msg *msg,
 			}
 
 			if ((k_uptime_get() - start_time) >
-			    STM32_I2C_TRANSFER_TIMEOUT_MSEC) {
+			    I2C_STM32_TRANSFER_TIMEOUT_MSEC) {
 				return -ETIMEDOUT;
 			}
 		}
@@ -917,7 +918,7 @@ static int i2c_stm32_msg_read(const struct device *dev, struct i2c_msg *msg,
 				return -EIO;
 			}
 			if ((k_uptime_get() - start_time) >
-			    STM32_I2C_TRANSFER_TIMEOUT_MSEC) {
+			    I2C_STM32_TRANSFER_TIMEOUT_MSEC) {
 				return -ETIMEDOUT;
 			}
 		}
@@ -1292,6 +1293,8 @@ int i2c_stm32_transaction(const struct device *dev,
 
 #ifndef CONFIG_I2C_STM32_INTERRUPT
 	struct i2c_stm32_data *data = dev->data;
+	const struct i2c_stm32_config *cfg = dev->config;
+	I2C_TypeDef *i2c = cfg->i2c;
 
 	if (ret == -ETIMEDOUT) {
 		if (LL_I2C_IsEnabledReloadMode(i2c)) {

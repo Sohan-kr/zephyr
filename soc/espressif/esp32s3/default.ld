@@ -386,6 +386,7 @@ SECTIONS
     *liblib__libc__picolibc.a:string.*(.literal .text .literal.* .text.*)
     *libphy.a:(.phyiram .phyiram.*)
     *libgcov.a:(.literal .text .literal.* .text.*)
+    *librtc.a:(.literal .text .literal.* .text.*)
 
     /* APPCPU_ENABLED */
     *libzephyr.a:esp32s3-mp.*(.literal .text .literal.* .text.*)
@@ -716,6 +717,8 @@ SECTIONS
     *libzephyr.a:esp_err.*(.rodata .rodata.*)
     *(.rodata.esp_system_abort)
 
+    *libphy.a:(.rodata .rodata.*)
+
 #if defined(CONFIG_ESP32_WIFI_IRAM_OPT)
     /* [mapping:esp_wifi] */
     *(.rodata.wifi_clock_enable_wrapper)
@@ -1018,8 +1021,18 @@ SECTIONS
     _ext_ram_bss_start = ABSOLUTE(.);
     *(.ext_ram.bss*)
     . = ALIGN(16);
+
+    /* Custom modules sections list */
+    KEEP(*(.lvgl_buf*))
+    . = ALIGN(16);
+    KEEP(*(.lvgl_heap*))
+    . = ALIGN(16);
+    KEEP(*(.mbedtls_heap*))
+    . = ALIGN(16);
+
     _ext_ram_bss_end = ABSOLUTE(.);
 
+    /* Used by Shared Multi Heap */
     _ext_ram_heap_start = ABSOLUTE(.);
     . += CONFIG_ESP_SPIRAM_HEAP_SIZE;
     . = ALIGN(16);

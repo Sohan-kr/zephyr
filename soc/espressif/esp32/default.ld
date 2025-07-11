@@ -368,6 +368,7 @@ SECTIONS
     *libc.a:*(.literal .text .literal.* .text.*)
     *libphy.a:( .phyiram .phyiram.*)
     *libgcov.a:(.literal .text .literal.* .text.*)
+    *librtc.a:(.literal .text .literal.* .text.*)
 
     /* [mapping:esp_psram] */
     *libzephyr.a:mmu_psram_flash.*(.literal .literal.* .text .text.*)
@@ -699,6 +700,8 @@ SECTIONS
     *libzephyr.a:esp_rom_wdt.*(.rodata .rodata.*)
     *libzephyr.a:esp_rom_efuse.*(.rodata .rodata.*)
 
+    *libphy.a:(.rodata .rodata.* .srodata .srodata.*)
+
     KEEP(*(.jcr))
     *(.dram1 .dram1.*)
 
@@ -845,6 +848,15 @@ SECTIONS
     _ext_ram_bss_start = ABSOLUTE(.);
     *(.ext_ram.bss*)
     . = ALIGN(16);
+
+    /* Custom modules sections list */
+    KEEP(*(.lvgl_buf*))
+    . = ALIGN(16);
+    KEEP(*(.lvgl_heap*))
+    . = ALIGN(16);
+    KEEP(*(.mbedtls_heap*))
+    . = ALIGN(16);
+
     _ext_ram_bss_end = ABSOLUTE(.);
 
     _ext_ram_heap_start = ABSOLUTE(.);
